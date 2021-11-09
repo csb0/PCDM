@@ -1,0 +1,94 @@
+function plotFits(d,f)
+% plotFits.m
+%
+%     Authors: Charlie Burlingham & Saghar Mirbagheri
+%
+%     Date: 11/8/21
+%
+%     Purpose: plots data vs. model fits
+%
+%     Usage:
+%
+
+%% plot easy v hard trial avg. pupil data vs. fit
+hardPupAvg = nanmean(d.pupilAvg(logical(d.hardEasyInds),:)); % data
+hardModelAvg = nanmean(f.pred(logical(d.hardEasyInds),:)); % model
+easyPupAvg = nanmean(d.pupilAvg(~logical(d.hardEasyInds),:)); % data
+easyModelAvg = nanmean(f.pred(~logical(d.hardEasyInds),:)); % model
+
+figure; 
+subplot(1,2,1);
+plot(linspace(0,length(hardPupAvg)./d.sampleRate,length(hardPupAvg)),hardPupAvg,'r','lineWidth',2);
+hold on; plot(linspace(0,length(hardModelAvg)./d.sampleRate,length(hardModelAvg)),hardModelAvg,'k','lineWidth',2);
+box off; %grid on;
+buffer = (max([max(hardPupAvg),max(hardModelAvg)]).*1.05) - max([max(hardPupAvg),max(hardModelAvg)]);
+ylim([min([min(easyPupAvg),min(easyModelAvg)])-buffer max([max(hardPupAvg),max(hardModelAvg)]).*1.05])
+hline(mean(hardPupAvg),'r')
+subplot(1,2,2);
+plot(linspace(0,length(easyPupAvg)./d.sampleRate,length(easyPupAvg)),easyPupAvg,'g','lineWidth',2);
+hold on; plot(linspace(0,length(easyModelAvg)./d.sampleRate,length(easyModelAvg)),easyModelAvg,'k','lineWidth',2);
+box off; %grid on;
+ylim([min([min(easyPupAvg),min(easyModelAvg)])-buffer max([max(hardPupAvg),max(hardModelAvg)]).*1.05])
+hline(mean(easyPupAvg),'g')
+legend('data','model')
+
+%% plot for each run trial avg. pupil data vs. fit
+figure;
+for ii = 1:length(f.sigma)
+    subplot(1,length(f.sigma),ii);
+    plot(linspace(0,length(d.pupilAvg(ii,:))./d.sampleRate,length(d.pupilAvg(ii,:))),d.pupilAvg(ii,:),'b','lineWidth',2);
+    hold on; plot(linspace(0,length(f.pred(ii,:))./d.sampleRate,length(f.pred(ii,:))),f.pred(ii,:),'k','lineWidth',2);
+    box off; grid on;
+    buffer = (max([max(max(d.pupilAvg)),max(max(f.pred))]).*1.05) - max([max(max(d.pupilAvg)),max(max(f.pred))]);
+    %ylim([min([min(min(d.pupilAvg)),min(min(f.pred))])-buffer max([max(max(d.pupilAvg)),max(max(f.pred))]).*1.05])
+end
+legend('data','model')
+
+%% plot parameters from each run according to mean accuracy and RT 
+
+figure; 
+subplot(2,2,1)
+scatter(d.accuracyByRun,f.sigma); xlabel('accuracy'); ylabel('sigma'); axis square
+subplot(2,2,2)
+scatter(d.accuracyByRun,f.offset); xlabel('accuracy'); ylabel('offset'); axis square
+subplot(2,2,3)
+scatter(d.RTByRun,f.sigma); xlabel('RT'); ylabel('sigma'); axis square
+subplot(2,2,4)
+scatter(d.RTByRun,f.offset); xlabel('RT'); ylabel('offset'); axis square
+
+
+% plot trial-avg pupil responses by accuracy by run
+[~,sortInds] = sort(d.accuracyByRun);
+figure; ax = plot(d.pupilAvg(sortInds,:)' - d.pupilAvg(sortInds,1)','lineWidth',3);
+
+n = length(d.accuracyByRun);               %// number of colors
+R = linspace(1,0,n);  %// Red from 1 to 0
+B = zeros(size(R));  %// Blue all zero 
+G = linspace(0,1,n);    %// Green from 0 to 1
+cmap1 = [R(:), G(:), B(:)];  %// create colormap
+set(ax, {'color'}, num2cell(cmap1,2));
+
+%% plot parameters
+
+easyOffset = f.offset(~logical(d.hardEasyInds)); 
+hardOffset = f.offset(logical(d.hardEasyInds)); 
+easySigma = f.sigma(~logical(d.hardEasyInds)); 
+hardSigma = f.sigma(logical(d.hardEasyInds)); 
+
+figure; 
+subplot(2,1,1)
+hold on; plot(.4,mean(easyOffset),'go'); plot(.6,mean(hardOffset),'ro');
+errorbar(.4,mean(easyOffset),std(easyOffset)./sqrt(length(easyOffset)),'g');
+errorbar(.6,mean(hardOffset),std(hardOffset)./sqrt(length(hardOffset)),'r');
+xlim([0,1])
+title('Offset')
+subplot(2,1,2)
+hold on; plot(.4,mean(easySigma),'go'); plot(.6,mean(hardSigma),'ro');
+errorbar(.4,mean(easySigma),std(easySigma)./sqrt(length(easySigma)),'g');
+errorbar(.6,mean(hardSigma),std(hardSigma)./sqrt(length(hardSigma)),'r');
+xlim([0,1])
+title('Sigma')
+
+
+
+end
