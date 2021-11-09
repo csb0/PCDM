@@ -39,7 +39,7 @@ for ii = 1:size(d.sacIrf,1) % loop across runs
     d.pupil{ii} = d.pupil{ii}+d.baseline(ii);
     gain{ii} = gainFinder(nanmean(d.sacRate2),parametricLinearFilter,d.pupil{ii},trialTypes,d.trInds{ii});
 end
-
+keyboard
 % evaluate model with best gain
 for ii = 1:size(d.sacIrf,1) % loop across runs
     [offset,pupilPrediction,trAvg,Rsq,Generator,predFullTimeSeries] = evalModel(gain(ii), nanmean(d.sacRate2),parametricLinearFilter,d.pupil{ii},trialTypes,d.trInds{ii});

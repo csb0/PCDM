@@ -26,12 +26,14 @@ for ii=1:max(trialType)
     for jj=1:length(thisType)
         % CSB: need to estimate multiple generator function here, one per
         % trial type ? or use just one genFunc for all trialTypes
-        generatorSeries(trialInds(thisType(jj),1):trialInds(thisType(jj),2),ii) = Generator(i,1:trialInds(thisType(jj),2)- trialInds(thisType(jj),1)+1);
+        generatorSeries(trialInds(thisType(jj),1):trialInds(thisType(jj),2),ii) = Generator(1,1:trialInds(thisType(jj),2)- trialInds(thisType(jj),1)+1);
     end
-    generatorSeries = generatorSeries - mean(generatorSeries(:,ii));
-    pred = conv(MIR,generatorSeries(:,ii));
-    predMatrix(:,ii) = pred(1:length(pupil));
 end
+    generatorSeries = generatorSeries - mean(mean(generatorSeries));
+
+    
+ pred = conv(MIR,generatorSeries(:,ii));
+    predMatrix(:,ii) = pred(1:length(pupil));
 inds =[];
 newTrInds = trialInds;
 for ii=1:size(trialInds,1)
@@ -51,12 +53,12 @@ for ii =1:size(trialInds,1)
      trialPupilM(ii,:,1:newTrInds(ii,2)-newTrInds(ii,1)+1) = predMatrix(newTrInds(ii,1):newTrInds(ii,2),:)';
      trialPupilD(ii,1:newTrInds(ii,2)-newTrInds(ii,1)+1) = pupil(newTrInds(ii,1):newTrInds(ii,2),:)';
 end
-
+keyboard
 predMatrixAvg = squeeze(nanmean(trialPupilM)); 
-predMatrixAvg = predMatrixAvg- (mean(predMatrixAvg));
+predMatrixAvg = predMatrixAvg- (mean(predMatrixAvg,2));
 pupilAvg = nanmean(trialPupilD);
 
-DM = [ones(length(pupilAvg),1), predMatrixAvg];
+DM = [ones(length(pupilAvg),1), predMatrixAvg'];
 sol = regress(pupilAvg',DM);
 
 gain = sol(2:end);
