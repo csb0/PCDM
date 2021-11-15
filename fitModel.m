@@ -37,7 +37,7 @@ trialTypes = ones(1,length(d.trInds{1}));
 for ii = 1:size(d.sacIrf,1) % loop across runs
     trialTypes = d.accuracyByTrial{ii}+1;
     d.pupil{ii} = d.pupil{ii}+d.baseline(ii);
-    gain{ii} = gainFinder(nanmean(d.sacRate2),parametricLinearFilter,d.pupil{ii},trialTypes,d.trInds{ii});
+    gain(:,ii) = gainFinder_reviewers([nanmean(d.sacRate2); nanmean(d.sacRate2)],parametricLinearFilter,d.pupil{ii},trialTypes,d.trInds{ii});
 end
 keyboard
 % evaluate model with best gain

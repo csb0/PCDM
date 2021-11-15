@@ -67,6 +67,7 @@ for iRun = 1:length(stimfiles)
     e = getTaskEyeTraces3(stimfiles{iRun});
     edf = e.edf;
     
+  
     tiltStim2 = e.randVars.tiltStim2; %s.stimulus.tiltStim2; % for fixedITI data instead, change to s.stimulus.tiltStim2   .   % for cue validity expt, set to "s.stimulus.tiltStim2(1:120);" % for block alt, set to e.randVars.tiltStim2(1:160)
     tiltStim2(tiltStim2==1)=2;
     tiltStim2(tiltStim2==-1)=1;
