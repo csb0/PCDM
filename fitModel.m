@@ -35,9 +35,13 @@ trialTypes = ones(1,length(d.trInds{1}));
 
 % find best gain 
 for ii = 1:size(d.sacIrf,1) % loop across runs
-    trialTypes = d.accuracyByTrial{ii}+1;
+    trialTypes = d.accuracyByTrial{ii}+1; % 1 is incorr, 2 is corr
     d.pupil{ii} = d.pupil{ii}+d.baseline(ii);
-    gain(:,ii) = gainFinder_reviewers([nanmean(d.sacRate2); nanmean(d.sacRate2)],parametricLinearFilter,d.pupil{ii},trialTypes,d.trInds{ii});
+    gain{ii} = gainFinder_reviewers([nanmean(d.sacRate2); nanmean(d.sacRate2)],parametricLinearFilter,d.pupil{ii},trialTypes,d.trInds{ii});
+%                                     ^^ note above I put sacRate twice,
+%                                     for corr vs. incorr, but can replace
+%                                     with condition-specific saccRate if
+%                                     desired
 end
 keyboard
 % evaluate model with best gain

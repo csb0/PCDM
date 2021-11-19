@@ -21,8 +21,8 @@ function [gain,genFunc] = gainFinder(saccRate,linearFilter,pupilTimeSeries,trial
 %              correspond to pupilTimeSeries (CX2 matrix)
 %
 %     Outputs: 
-%            - gain: estimated gain
-%
+%            - gain: estimated gain 
+%            - genFunc: estimate generator function (1XN matrix)
 
 %% Estimate expected value of generator function for each trial type
 threshold = 1; % threshold is arbitrary, but must be consistent
@@ -34,19 +34,19 @@ genFunc = genFunc-nanmean(genFunc); % mean-subtract generator function
 
 %% Compute time series of estimated generator function input across all trials (generatorSeries) 
 trialLengthToFit = 2000; % 4 s at 500 Hz sampling rate, for example
-linearFilter = linearFilter-linearFilter(1);
 generatorSeries = zeros(length(pupilTimeSeries),1);
-predMatrix = zeros(length(pupilTimeSeries),1);
 
 for jj=1:size(trialInds,1)
     generatorSeries(trialInds(jj,1):trialInds(jj,2)) = genFunc(1:trialInds(jj,2)- trialInds(jj,1)+1);
 end
-
 generatorSeries = generatorSeries - mean(generatorSeries);
+
+%% Predict pupil size by convolving generator series and linear filer
+linearFilter = linearFilter-linearFilter(1); % linear filter should start from 0
 pred = conv(linearFilter,generatorSeries);
 predMatrix = pred(1:length(pupilTimeSeries));
 
-
+%% Truncating trial lengths to desired lengths
 inds =[];
 newTrInds = trialInds;
 for ii=1:size(trialInds,1)
@@ -59,6 +59,7 @@ end
 pupilTimeSeries(inds) = [];
 predMatrix(inds,:) =[];
 
+%% Compute trial-averaged pupil size for data and model
 trialPupilM = nan(size(trialInds,1), trialLengthToFit);
 trialPupilD = nan(size(trialInds,1), trialLengthToFit);
 for ii =1:size(trialInds,1)
@@ -66,7 +67,6 @@ for ii =1:size(trialInds,1)
     trialPupilD(ii,1:newTrInds(ii,2)-newTrInds(ii,1)+1) = pupilTimeSeries(newTrInds(ii,1):newTrInds(ii,2))';
 end
 
-%% Compute trial-averaged pupil size for data and model
 predMatrixAvg = nanmean(trialPupilM);
 predMatrixAvg = predMatrixAvg- (mean(predMatrixAvg,2)); % compute trial-averaged pupil size from model
 pupilAvg = nanmean(trialPupilD); % compute trial-averaged pupil size from data
@@ -75,4 +75,5 @@ pupilAvg = nanmean(trialPupilD); % compute trial-averaged pupil size from data
 DM = [ones(length(pupilAvg),1), predMatrixAvg'];
 sol = regress(pupilAvg',DM);
 gain = sol(2:end);
+
 end
