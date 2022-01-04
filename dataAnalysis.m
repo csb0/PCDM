@@ -192,6 +192,7 @@ for iRun = 1:length(stimfiles)
     pupilAvg = [pupilAvg; nanmean(e.eye.pupil(:,1:floor(maxLength/100)*100))];
     baseline = [baseline; edf.gaze.baseline];
 
+    keyboard
 end
 
 d.sacRate = sacRate;

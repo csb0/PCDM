@@ -7,6 +7,9 @@ function plotFits(d,f)
 %
 %     Purpose: plots data vs. model fits
 %
+%     Todos: - improve this function, by having it plot everything for
+%              diagnostic checks. 
+%            - have it plot split trial type             
 
 
 %% plot data vs. model fit (trial-average responses)
@@ -20,6 +23,8 @@ for ii = 1:length(f.gain)
     box off; grid on;
 end
 legend('data','model')
+
+
 
 
 %% plot data vs. model fit (full time series)
