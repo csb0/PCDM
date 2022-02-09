@@ -1,15 +1,17 @@
 function [ RsquareFit ] = PuRF_fit(n,tMin,myIRF,sampleRate)
 % PuRF_fit.m 
-%       Authors: Charlie Burlingham, Saghar Mirbagheri
 %
-%       Date: Sept 26, 2020
+%     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science 
+%           Advances. *Equal Authors
 %
-%       Purpose: fits parametric form to saccade-locked pupil response
+%     Date: 2/9/22
 %
-%       Inputs: - n, exponent that controls width of trough of Gamma-Erling function
-%               - tMin, controls time-to-minimum of Gamma-Erling function
-%               - myIRF, saccade-locked pupil response
-%               - sampleRate, samping rate of saccade-locked pupil response
+%     Purpose: fits parametric form to saccade-locked pupil response
+%
+%     Inputs: - n, exponent that controls width of trough of Gamma-Erling function
+%             - tMin, controls time-to-minimum of Gamma-Erling function
+%             - myIRF, saccade-locked pupil response
+%             - sampleRate, samping rate of saccade-locked pupil response
 
     timeStep = 1000/sampleRate;
     impulseTime = 4000;

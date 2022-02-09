@@ -1,24 +1,26 @@
 function [parametricLinearFilter, params, Rsq, normFactor] = fitParametricPuRFfromData(irfData,samplingRate,outSamplingRate,plotFit)
 % fitParametricPuRFfromData.m 
-%       Authors: Charlie Burlingham, Saghar Mirbagheri
 %
-%       Date: Sept 26, 2020
+%     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science 
+%           Advances. *Equal Authors
 %
-%       Purpose: Fits a parametric form to the observed saccade-locked pupillary
-%               impulse response function. This is a poor alternative to un-deforming the
-%               IRF according to our model, but is better than using a fixed parametric
-%               form for the PuRF, which is what everyone has done previously. This at
-%               least captures the inter-individual variation in the time-to-minimum and
-%               the the width of the IRF around its minimum point.
+%     Date: 2/9/22
 %
-%       Inputs: - irfData, a vector containing the saccade-locked pupil response
-%               - samplingRate, input sampling rate of the data, either from eyeTracker directly or after downsampling
-%               - plotFit, 0 or 1, where 1 plots the measured and fit IRFs on top of eachother
-%               - outSamplingRate, the sampling rate you want the parametric filter to have
+%     Purpose: Fits a parametric form to the observed saccade-locked pupillary
+%             impulse response function. This is a poor alternative to un-deforming the
+%             IRF according to our model, but is better than using a fixed parametric
+%             form for the PuRF, which is what everyone has done previously. This at
+%             least captures the inter-individual variation in the time-to-minimum and
+%             the the width of the IRF around its minimum point.
 %
-%       Outputs - parametricLinearFilter, the parametric fit to the PuRF, a gamma-erling function
-%               - params, the params of the Erling function (n and tMin)
-%               - Rsq, the R^2 of the fit
+%     Inputs: - irfData, a vector containing the saccade-locked pupil response
+%             - samplingRate, input sampling rate of the data, either from eyeTracker directly or after downsampling
+%             - plotFit, 0 or 1, where 1 plots the measured and fit IRFs on top of eachother
+%             - outSamplingRate, the sampling rate you want the parametric filter to have
+%
+%     Outputs - parametricLinearFilter, the parametric fit to the PuRF, a gamma-erling function
+%             - params, the params of the Erling function (n and tMin)
+%             - Rsq, the R^2 of the fit
 
 %% Fit parametric form
 irfData = irfData-irfData(1);
@@ -65,5 +67,6 @@ if plotFit
      legend('data','parametric fit')
      box off; grid on;
 end
+title('Diagnostic check: fit of linear filter to saccade-locked pupil response')
 
 end

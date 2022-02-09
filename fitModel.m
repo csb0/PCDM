@@ -1,9 +1,10 @@
 function [d,f] = fitModel(in)
 % fitModel.m
 %
-%     Authors: Charlie S. Burlingham & Saghar Mirbagheri
+%     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science 
+%           Advances. *Equal Authors
 %
-%     Date: 2/8/21
+%     Date: 2/9/21
 %
 %     Purpose: Fits Pupil Common Drive Model (PCDM) to pupil and saccade 
 %              data. Estimates model inputs and parameters: trial-average 
@@ -13,35 +14,34 @@ function [d,f] = fitModel(in)
 %     Usage:   Input your eye data and task/contrast info (see 
 %              dataAnalysis.m for format and details).
 %
-
 %%
 
 % Load in data struct "in" (see dataAnalysis for format and details)
 d = dataAnalysis(in); % d is input structure
 
 % estimate inter-saccadic interval and parameter k
-[k, kCI] = fitK(d.saccTimes, d.sampleRate, 1);
+[k, k_CI] = fitK(d.saccTimes, d.sampleRate, 1);
 
 % adjust saccade rate functions for estimated post-saccadic refractory period
 numRuns = size(d.sacIrf,1); % loop across runs
 for ii = 1:numRuns
-    d.sacRate2{ii} = k.*d.sacRate{ii};
+    d.sacRate2{ii} = round(k).*d.sacRate{ii};
 end
 
 % estimate parametric linear filter from run-average saccade-locked pupil response
 IrfAvg = nanmean(d.sacIrf); % avg. saccade-locked IRF across all runs 
-[parametricLinearFilter, params, Rsq1, normFactor] = fitParametricPuRFfromData(IrfAvg,d.sampleRate./d.downsampleRate,d.sampleRate,1);
+[parametricLinearFilter, params_PuRF, Rsq_PuRF, normFactor_PuRF] = fitParametricPuRFfromData(IrfAvg,d.sampleRate./d.downsampleRate,d.sampleRate,1);
 d.parametricLinearFilter = parametricLinearFilter;
-
 
 % fit and evaluate model parameters
 for ii = 1:numRuns % loop across runs
     temp = gainFinder(d,ii);
-    f.gain{ii} = temp.gain;
-    f.Generator{ii} = temp.Generator;
-    f.offset{ii} = temp.offset;
-    f.Rsq{ii} = temp.Rsq;
-    f.pred{ii} = temp.pred;
+    
+    f.gain{ii} = temp.gain; % gain
+    f.Generator{ii} = temp.Generator; % generator function
+    f.offset{ii} = temp.offset; % additive offset
+    f.Rsq{ii} = temp.Rsq; % R-squared of model
+    f.pred{ii} = temp.pred; % model prediction of pupil response
 end
 
 % plot data and model fits

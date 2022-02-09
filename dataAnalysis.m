@@ -1,9 +1,10 @@
 function [d] = dataAnalysis(in)
 % dataAnalysis.m
 %
-%     Authors: Charlie S. Burlingham & Saghar Mirbagheri
+%     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science 
+%           Advances. *Equal Authors
 %
-%     Date: 2/8/21
+%     Date: 2/9/21
 %
 %     Purpose: Pre-processes eye data and estimates inputs to model.
 %
@@ -21,8 +22,9 @@ function [d] = dataAnalysis(in)
 %              input struct "in" with fields containing cell array with one
 %              cell per run of data. Field names:
 %
-%              - yPos: horizontal gaze position (column vector)
-%              - yPos: vertical gaze position (column vector)
+%              - yPos: horizontal gaze position in dva (column vector)
+%              - yPos: vertical gaze position in dva (column vector)
+%                      (the coodinates (0,0) should be at fixation)
 %              - pupilArea: pupil area (column vector)
 %              - startInds: trial start indexes in samples (n x 2 matrix
 %                with trial start and end times, n is number of trials)
@@ -57,6 +59,7 @@ in.predictionWindow = 4; % The time window you want to make the prediction for t
 numRuns = length(in.pupilArea); % number of runs of data (number of cells passed as input)
 
 for kk = 1:numRuns
+    disp(['Processing Run #' num2str(kk)])
     
     %% Interpolate blinks (Mathot's method, modified for Parker & Denison 2020)
     if op.interpolateBlinks == 1

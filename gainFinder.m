@@ -1,12 +1,13 @@
 function f = gainFinder(d,ii)
 % gainFinder.m
+%     
+%     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science 
+%           Advances. *Equal Authors
 %
-%     Authors: Charlie S. Burlingham & Saghar Mirbagheri
+%     Date: 2/9/22
 %
-%     Date: 11/8/21
-%
-%     Purpose:  Solves for best-fit gain and generator function(s), and
-%               returns model predictions and goodness of fit.
+%     Purpose: Solves for best-fit gain and generator function(s), and
+%              returns model predictions and goodness of fit.
 %
 
 threshold = 1; % arbitrary, but fixed 

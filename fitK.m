@@ -1,30 +1,32 @@
 function [k kCI] = fitK(saccs, samplingRate, plotFit)
 % fitK.m
-% Charlie Burlingham & Saghar Mirbagheri
-% July 11, 2020
 %
-% Purpose: Fits k, the shape parameter of a gamma distribution, from the 
-% measured inter-saccadic interval statistics. 
+%     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science 
+%           Advances. *Equal Authors
 %
-% In our model, k controls the refractory period following each saccade by 
-% removing every k-th saccade (equivalent to scaling the trial-averaged 
-% rate function).
+%     Date: 2/9/21
 %
-% Inputs: 
-% - saccs, a cell array containing one matrix with saccade onset, offset, 
-% amplitde, etc... for each run of trials. Each matrix is what is returned 
-% by default by the Engbert & Kliegel algorithm. trMSAnalMicLeft_Vs_Right.m
-% or dataAnalysis.m will output this cell array.
+%     Purpose: Fits k, the shape parameter of a gamma distribution, from  
+%              the measured inter-saccadic interval statistics.
 %
-% - samplingRate, sampling rate of eye tracker or input data. 500 Hz by
-% default
+%              In our model, k controls the refractory period following 
+%              each saccade by removing every k-th saccade (equivalent to
+%              scaling the  trial-averaged rate function).   
+%                  
 %
+%              Inputs: 
+%               - saccs, a cell array containing one matrix with saccade 
+%               onset, offset, amplitde, etc... for each run of trials.
+%               Each matrix is what is returned by default by the Engbert &
+%               Kliegel algorithm. trMSAnalMicLeft_Vs_Right.m or
+%               dataAnalysis.m will output this cell array.
+%               - samplingRate, sampling rate of eye tracker or input data.
+%               500 Hz by default
 %
-% Outputs:
-% - k, remove every k-th saccade to model the empirical inter-saccadic
-% interval
-%
-% - kCI, 95% confidence interval around estimate of k.
+%               Outputs:
+%               - k, remove every k-th saccade to model the empirical 
+%               inter-saccadic interval
+%               - kCI, 95% confidence interval around estimate of k.
 
 if ieNotDefined('samplingRate')
     samplingRate = 500; %Hz
@@ -68,6 +70,6 @@ if plotFit
     plot(0:.01:max(interSacIntervals),gampdf(0:.01:max(interSacIntervals),k,theta),'r','lineWidth',2);
 end
 
-title('Diagnostic checks')
+title('Diagnostic check: fit of Gamma distribution to inter-saccade interval distribution')
 
 end
