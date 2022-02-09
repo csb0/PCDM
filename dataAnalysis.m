@@ -9,8 +9,8 @@ function [d] = dataAnalysis(in)
 %
 %              Specifically does the following: blink interpolation
 %              (optional), bandpass filtering of pupil data, saccade
-%              detection, devonvolution of saccade-locked IRF, estimation
-%              of task-evoked pupil response (user can format input data
+%              detection, deconvolution of saccade-locked pupil response, 
+%              estimation of task-evoked pupil response (can format data
 %              to lock pupil response to various events, e.g., task onset,
 %              cues, or button press), estimation of saccade rate
 %              function(s) (one per trial type, e.g., correct vs. error
@@ -81,9 +81,9 @@ for kk = 1:numRuns
     % make a convolution matrix with width (putative IRF length)
     saccadeTimeVector = zeros(1, length(pupilDN)); saccadeTimeVector(sacTimeInd) = 1;
     nTrials = length(in.startInds);
-    for trNum = 1:nTrials-1
-        sacDuringThisTr = sacTimeInd(sacTimeInd < in.startInds{kk}(trNum,2) & sacTimeInd > in.startInds{kk}(trNum,1));
-    end
+%     for trNum = 1:nTrials-1
+%         sacDuringThisTr = sacTimeInd(sacTimeInd < in.startInds{kk}(trNum,2) & sacTimeInd > in.startInds{kk}(trNum,1));
+%     end
     putativeIRFlength = in.putativeIRFdur*in.sampleRate{kk}/op.downsampleRate;
     for ii=1:putativeIRFlength
         Sacmatrix(1:length(pupilDN),ii) = [zeros(1,ii-1) saccadeTimeVector(1:length(pupilDN)-ii+1)]';
@@ -135,7 +135,6 @@ d.sampleRate = in.sampleRate{1}; % there should be only one sampling rate for al
 d.downsampleRate = op.downsampleRate;
 d.trInds = in.startInds;
 d.predictionWindow = in.predictionWindow;
-
 
 
 end

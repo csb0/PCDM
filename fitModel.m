@@ -10,7 +10,8 @@ function [d,f] = fitModel(in)
 %              pupil response, linear filter, post-saccadic refractory 
 %              period, saccade rate function, generator function, and gain.
 %
-%     Usage: 
+%     Usage:   Input your eye data and task/contrast info (see 
+%              dataAnalysis.m for format and details).
 %
 
 %%
