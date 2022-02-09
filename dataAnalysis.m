@@ -1,210 +1,141 @@
-function [d] = dataAnalysis(directory)
+function [d] = dataAnalysis(in)
 % dataAnalysis.m
 %
-%      Authors: Charlie S. Burlingham & Saghar Mirbagheri
+%     Authors: Charlie S. Burlingham & Saghar Mirbagheri
 %
-%      Date:    09/26/2020
+%     Date: 2/8/21
 %
-%      Purpose: Estimates trial-averaged pupil response, saccade-locked
-%               pupil response, and saccade rate function.
+%     Purpose: Pre-processes eye data and estimates inputs to model.
 %
-%       Input:  "directory", path containing .mat files - both stimfiles and converted edf file
+%              Specifically does the following: blink interpolation
+%              (optional), bandpass filtering of pupil data, saccade
+%              detection, devonvolution of saccade-locked IRF, estimation
+%              of task-evoked pupil response (user can format input data
+%              to lock pupil response to various events, e.g., task onset,
+%              cues, or button press), estimation of saccade rate
+%              function(s) (one per trial type, e.g., correct vs. error
+%              trials).
 %
-%      Outputs: "d", data struct containing pupil trial averages,
-%               deconvolved saccade-locked pupil responses, and
-%               saccade rate functions for each run (and separately for
-%               correct and incorrect trials).
+%     Inputs:
 %
-%     Todo:     - add a flag for each session
-%               - automatically run edfToMat in directory if it hasn't been
-%                 run already yet.
+%              input struct "in" with fields containing cell array with one
+%              cell per run of data. Field names:
+%
+%              - yPos: horizontal gaze position (column vector)
+%              - yPos: vertical gaze position (column vector)
+%              - pupilArea: pupil area (column vector)
+%              - startInds: trial start indexes in samples (n x 2 matrix
+%                with trial start and end times, n is number of trials)
+%              - sampleRate: sampling rate of eye tracker (Hz)
+%              - trialTypes: trial types (e.g., easy / hard, or corr\error)
+%                integers for each trial, e.g. 1,2,3,4,5 (1 x n vector)
+%              - predictionWindow: time window within a trial to make a
+%                prediction (e.g. 4 sec within a jittered ISI expt)
+%
+%              options struct "op" with field names:
+%
+%              - interpolateBlinks (0 or 1) to interpolate blinks from pupil
+%                time series (only use if you are inputting eyeLink data,
+%                otherwise, do this step yourself)
+%              - downsampleRate for deconvolution of saccade-locked pupil
+%                response (default 5)
+%
+
+%% Set options
+op.interpolateBlinks = 1; % 1, blink interpolation on; 0, interpolation off (use this if your input data is already blink interpolated)
+op.downsampleRate = 5; % downsample rate for the deconvolution design matrix. Higher numbers makes code run faster, but shouldn't be set higher than Nyquist frequency.
+
+in.putativeIRFdur = 4; % how long you think the saccade-locked pupil response is in seconds. User-defined, but 4 s is a good estimate according to our results and the literature
+%in.trialTypes = ones(1,size(in.startInds,1)); % by default set to all ones. Change this to fit different trial types. For example, set all correct trials to 1 and all error trials to 2 if you want to estimate arousal on correct vs. incorrect trials.
+% debug: to generate random trial types
+%in.trialTypes( randi(75,75,1)) = 2; % CSB: remove when not using ***
+
+in.predictionWindow = 4; % The time window you want to make the prediction for the TEPR. Usually the max trial length, but can be shorter if you want.
 
 
-if ieNotDefined('directory'); directory = pwd; end
+%%
+numRuns = length(in.pupilArea); % number of runs of data (number of cells passed as input)
 
-pupilAvg = [];
-sacRate = [];
-sacIrf =[];
-baseline = [];
-lookBeforeOnset = 0;
-
-% make this so that it only finds and loads files that aren't HIDDEN- with
-% a "." before the filename. Also it only load mat files.
-s = dir(directory);
-s2 = s(arrayfun(@(x) ~strcmp(x.name(1),'.'),s));
-arrayStringS2  = {s2(:).name};
-stimfiles = arrayStringS2(endsWith(arrayStringS2,'.mat'));
-stimfileInds = contains(stimfiles,'stim');
-stimfiles = stimfiles(stimfileInds);
-cd(directory)
-
-pupTrace = cell(1,length(stimfiles));
-trInds = cell(1,length(stimfiles));
-accuracyByTrial = cell(1,length(stimfiles));
-
-for iRun = 1:length(stimfiles)
+for kk = 1:numRuns
     
-    % load the stimfile
-    s = load(stimfiles{iRun});
-    
-    % get the seglen and compute trial duration
-    try
-        trialLength = zeros(1,length(s.task{1,1}.seglenPrecompute.seglen.vals));
-        for ii = 1:length(s.task{1,1}.seglenPrecompute.seglen.vals) % for case when the timing is jittered and the ITIs are precomputed
-            trialLength(ii) = sum(s.task{1,1}.seglenPrecompute.seglen.vals{ii});
-        end
-        d.maxTrialLengthSec = max(trialLength);
-        d.firstSegLength = s.task{1,1}.seglenPrecompute.seglen.vals{1}(1);
-    catch
-        d.maxTrialLengthSec = sum(s.task{1,1}.seglen);
-        d.firstSegLength = s.task{1,1}.seglen(1);
+    %% Interpolate blinks (Mathot's method, modified for Parker & Denison 2020)
+    if op.interpolateBlinks == 1
+        in.pupilArea{kk}((isnan(in.pupilArea{kk}))) = 0; % set NaN regions to 0 for interp algorithm
+        in.pupilArea2 = blinkinterp(in.pupilArea{kk}',in.sampleRate{kk},5,4,50,75); % default options
     end
     
+    %% Band-pass filter pupil signal
+    in.pupilArea3 = myBWfilter(in.pupilArea2,[0.03 , 10],in.sampleRate{kk},'bandpass');
     
-    %% load and format eye data
+    %% Detect small saccades and microsaccades (method of Engbert & Mergenthaler 2006)
+    vel = vecvel([in.xPos{kk} in.yPos{kk}], in.sampleRate{kk}, 3); % compute eye velocity
+    d.saccTimes{kk} = microsacc([in.xPos{kk} in.yPos{kk}], vel, 8, 7); % detect (micro)saccade times based on eye velocity
     
-    % load edf file
-    e = getTaskEyeTraces3(stimfiles{iRun});
-    edf = e.edf;
+    %% Estimate saccade-locked pupil response
     
-  
-    tiltStim2 = e.randVars.tiltStim2; %s.stimulus.tiltStim2; % for fixedITI data instead, change to s.stimulus.tiltStim2   .   % for cue validity expt, set to "s.stimulus.tiltStim2(1:120);" % for block alt, set to e.randVars.tiltStim2(1:160)
-    tiltStim2(tiltStim2==1)=2;
-    tiltStim2(tiltStim2==-1)=1;
-    trialCorrect = tiltStim2==e.response;
-    accuracyByTrial{iRun} = trialCorrect;
-
+    % downsample the pupil data
+    sacOnset = d.saccTimes{kk}(:,1); % determine the indexes that saccades begin
+    pupilDN = downsample(in.pupilArea3,op.downsampleRate);
+    sacTimeInd = floor(sacOnset/op.downsampleRate)+1;
     
-    sampleRate = e.edf.samplerate;
-    
-    % extract time stamps of eye tracker, trial-onset, and button press
-    iTkrTime = edf.gaze.time;
-    trialStart = edf.mgl.time(edf.mgl.segmentNum==1);
-    
-    % find the index of the start of the run
-    [~, startInd] = min(abs(iTkrTime-trialStart(1)));
-    startInd = startInd(1);
-    
-    % find the last segment length
-    try
-        lastSegLength = s.task{1,1}.seglenPrecompute.seglen.vals{end}(end);
-    catch
-        lastSegLength = s.task{1,1}.seglen(end);
+    % make a convolution matrix with width (putative IRF length)
+    saccadeTimeVector = zeros(1, length(pupilDN)); saccadeTimeVector(sacTimeInd) = 1;
+    nTrials = length(in.startInds);
+    for trNum = 1:nTrials-1
+        sacDuringThisTr = sacTimeInd(sacTimeInd < in.startInds{kk}(trNum,2) & sacTimeInd > in.startInds{kk}(trNum,1));
+    end
+    putativeIRFlength = in.putativeIRFdur*in.sampleRate{kk}/op.downsampleRate;
+    for ii=1:putativeIRFlength
+        Sacmatrix(1:length(pupilDN),ii) = [zeros(1,ii-1) saccadeTimeVector(1:length(pupilDN)-ii+1)]';
     end
     
-    % find index of the end of the run
-    [~, endInd] = min(abs(iTkrTime-(edf.mgl.time(end)+lastSegLength*1000)));
-    endInd = endInd(1);
+    Sacmatrix = Sacmatrix(1:length(pupilDN),:);
+    d.sacIrf(kk,:) = pupilDN * pinv(Sacmatrix'); % deconvolve
     
-    % store the time indicies
-    eyeTrackerTime = startInd:endInd;
+    %% Estimate task-evoked pupil response
     
-    % extract the appropriate chunk of eye data
-    pupil = edf.gaze.pupil(eyeTrackerTime)';
+    maxTrialLength = max(in.startInds{kk}(:,2)-in.startInds{kk}(:,1))+1; % samples
     
-    % extract the position data
-    xPos = edf.gaze.x(eyeTrackerTime)';
-    yPos = edf.gaze.y(eyeTrackerTime)';
+    % make a convolution matrix with width (max trial length)
+    trialStartTimeDN = floor(in.startInds{kk}(:,1)/op.downsampleRate)+1;
+    trialStartTimeVec = zeros(1, length(pupilDN)); trialStartTimeVec(trialStartTimeDN) = 1;
     
-    % convert to degrees of visual angle
-    w = s.myscreen.screenWidth;
-    h = s.myscreen.screenHeight;
-    xPix2Deg = s.myscreen.imageWidth/w;
-    yPix2Deg = s.myscreen.imageHeight/h;
-    xPos = (xPos-(w/2))*xPix2Deg;
-    yPos = ((h/2)-yPos)*yPix2Deg;
+    maxTrialLengthDN = maxTrialLength/op.downsampleRate;
+    for ii=1:maxTrialLengthDN
+        TEPRmatrix(1:length(pupilDN),ii) = [zeros(1,ii-1) trialStartTimeVec(1:length(pupilDN)-ii+1)]';
+    end
     
-    %% detect (micro)saccades
+    TEPRmatrix = TEPRmatrix(1:length(pupilDN),:);
+    d.TEPR{kk} = pupilDN * pinv(TEPRmatrix'); % deconvolve
     
-    % now look for microsaccades
-    eyepos = cat(2, xPos, yPos);
+    %% Estimate saccade rate function(s) (one per trial type)
     
-    % compute velocity
-    vel = vecvel(eyepos, sampleRate, 3);
+    in.numTrialTypes{kk} = max(in.trialTypes{kk}); % number of trial types within the run of data. Shouldn't be set too high without feeding in much more data to constrain estimation.
     
-    % detect microsaccades (using method fo Engbert & Mergenthaler 2006)
-    mindur = 7;
-    vthresh = 8;
-    sacs = microsacc(eyepos, vel, vthresh, mindur);
-    
-    sacTimes{iRun} = sacs; % save out saccade times to fit inter-saccadic interval distribution later
-    
-    %%
-    edf.inds = edf.inds-startInd+1;
-    edf.inds(:,2) = edf.inds(:,2) - 1;
-    edf.inds(end,2) = length(pupil);
-    trInds{iRun} = edf.inds;
-    
-    %% estimate saccade-locked pupil response (deconvolve pupil size to saccade onset times)
-    
-    sacTime = sacs(:,1); % determine the indexes that saccades begin
-    downsampleRate = 5;
-    
-    if length(sacTime) > 0
-        % downsample the pupil data
-        pupilDN = downsample(pupil,downsampleRate);
-        sacTimeInd = floor(sacTime/downsampleRate)+1;
-        sacTimeInd = sacTimeInd(sacTimeInd>lookBeforeOnset) - lookBeforeOnset;
+    for ii = 1:double(in.numTrialTypes{kk}) % loop over trial types
+        trialNumsPerType{ii} = find(in.trialTypes{kk}(1:end-1)==ii);
+        nTrialsPerType(ii) = length(trialNumsPerType{ii});
+        rateRaster{ii} = nan(nTrialsPerType(ii), maxTrialLength);
+        saccadeTimeVector2{ii} = zeros(1, length(in.pupilArea3));
+        saccadeTimeVector2{ii}(sacOnset) = 1;
         
-        % make a convolution matrix with width (putative IRF length)
-        len = length(pupilDN);
-        saccadeTimeVector = zeros(1, len);
-        saccadeTimeVector(sacTimeInd) = 1;
-        
-        for trNum = 1:s.task{1}.trialnum-1
-            sacDuringThisTr = sacTimeInd(sacTimeInd < edf.inds(trNum,2) & sacTimeInd > edf.inds(trNum,1));
+        for trNum = trialNumsPerType{ii}
+            rateRaster{ii}(trNum,1:in.startInds{kk}(trNum,2) - in.startInds{kk}(trNum,1)+1) = saccadeTimeVector2{ii}(in.startInds{kk}(trNum,1):in.startInds{kk}(trNum,2));
         end
         
-        d.putativeIRFtime = 4; % Important: how long you think IRF is.
-        putativeIRFlength = d.putativeIRFtime*sampleRate/downsampleRate;
-        
-        for ii=1:putativeIRFlength
-            Sacmatrix(1:len,ii) = [zeros(1,ii-1) saccadeTimeVector(1:len-ii+1)]';
-        end
-        
-        Sacmatrix = Sacmatrix(1:len,:);
-        pupilSacIrf = pupilDN' * pinv(Sacmatrix');
-        sacIrf = [sacIrf; pupilSacIrf];
+        d.sacRateTemp = nanmean(rateRaster{ii});
+        d.sacRate{kk}(ii,:) = d.sacRateTemp(1:maxTrialLength);
     end
     
-    pupTrace{iRun} = pupil;
-    
-    %% estimate saccade rate function
-    
-    maxLength = max(edf.inds(:,2) - edf.inds(:,1)+1);
-    rateRaster = nan(s.task{1}.trialnum, maxLength);
-    saccadeTimeVector = zeros(1, length(pupil));
-    saccadeTimeVector(sacTime) = 1;
-    
-    for trNum = 1:s.task{1}.trialnum-1
-        rateRaster(trNum,1:edf.inds(trNum,2) - edf.inds(trNum,1)+1) = saccadeTimeVector(edf.inds(trNum,1):edf.inds(trNum,2));
-    end
-    
-    if iRun>1
-        if size(sacRate,2)<size(rateRaster,2)
-            sacRate =resizeToMatch(sacRate,size(rateRaster,2),2);
-        else
-            rateRaster =resizeToMatch(rateRaster,size(sacRate,2),2);
-        end
-    end
-    
-    sacRate = [sacRate ; nanmean(rateRaster)];
-    pupilAvg = [pupilAvg; nanmean(e.eye.pupil(:,1:floor(maxLength/100)*100))];
-    baseline = [baseline; edf.gaze.baseline];
-
-    keyboard
 end
 
-d.sacRate = sacRate;
-d.sacIrf = sacIrf;
-d.pupilAvg = pupilAvg + baseline; % add back baseline
-d.pupil = pupTrace;
-d.baseline = baseline;
-d.sampleRate = sampleRate;
-d.downsampleRate = downsampleRate;
-d.sacTimes = sacTimes;
-d.trInds = trInds;
-d.accuracyByTrial = accuracyByTrial;
+%% Save out other variables
+d.trialTypes = in.trialTypes;
+d.sampleRate = in.sampleRate{1}; % there should be only one sampling rate for all data, or remove the {1}
+d.downsampleRate = op.downsampleRate;
+d.trInds = in.startInds;
+d.predictionWindow = in.predictionWindow;
 
-return;
 
+
+end

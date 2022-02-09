@@ -68,5 +68,6 @@ if plotFit
     plot(0:.01:max(interSacIntervals),gampdf(0:.01:max(interSacIntervals),k,theta),'r','lineWidth',2);
 end
 
+title('Diagnostic checks')
 
 end
