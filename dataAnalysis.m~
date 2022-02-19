@@ -58,13 +58,13 @@ in.predictionWindow = 4; % The time window you want to make the prediction for t
 %%
 numRuns = length(in.pupilArea); % number of runs of data (number of cells passed as input)
 
-for ff = 1:numRuns
+for ff = 1:45
     disp(['Processing Run #' num2str(ff)])
-    
+    keyboard
     %% Interpolate blinks (Mathot's method, modified for Parker & Denison 2020)
     if op.interpolateBlinks == 1
         in.pupilArea{ff}((isnan(in.pupilArea{ff}))) = 0; % set NaN regions to 0 for interp algorithm
-        aboveT = find(abs(diff(in.pupilArea{ff})) > (in.sampleRate{ff}/10) ); % set other blink regions that were not detected by EyeLink firmware to 0 as well.  velocity threshold as defined in samples should depend on sampleRate 
+        aboveT = find(abs(diff(in.pupilArea{ff})) > 50); % set other blink regions that were not detected by EyeLink firmware to 0 as well
         in.pupilArea{ff}(aboveT) = 0; % set other blink regions that were not detected by EyeLink firmware to 0 as well
         in.pupilArea2 = blinkinterp(in.pupilArea{ff}',in.sampleRate{ff},5,4,50,75); % default options
     end
@@ -113,7 +113,7 @@ for ff = 1:numRuns
     
     TEPRmatrix = TEPRmatrix(1:length(pupilDN),:);
     d.TEPR{ff} = ( (pupilDN-nanmean(pupilDN)) * pinv(TEPRmatrix') ) + baseline; % deconvolve
-    
+    keyboard
     %% Estimate saccade rate function(s) (one per trial type)
     
     in.numTrialTypes{ff} = max(in.trialTypes{ff}); % number of trial types within the run of data. Shouldn't be set too high without feeding in much more data to constrain estimation.
@@ -134,7 +134,6 @@ for ff = 1:numRuns
     end
     
     d.pupilTS{ff} = in.pupilArea3;
-    
 end
 
 %% Save out other variables

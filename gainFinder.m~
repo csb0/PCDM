@@ -35,6 +35,9 @@ for kk = 1:max(d.trialTypes{ii})
     predMatrix(:,kk) = pred(1:length(d.pupilTS{ii}));
 end
 
+% remove data up until trialWindow (eg 4 sec) in data and model, then fit
+% gains.****
+
 DM = [ones(length(d.pupilTS{ii}),1), predMatrix];
 sol = regress(d.pupilTS{ii}',DM);
 gain = sol(2:end);

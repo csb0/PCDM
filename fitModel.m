@@ -35,7 +35,7 @@ d.parametricLinearFilter = parametricLinearFilter;
 
 % fit and evaluate model parameters
 for ii = 1:numRuns % loop across runs
-    temp = gainFinder(d,ii);
+    temp = gainFinder(d,ii); % ii index is for runs
     
     f.gain{ii} = temp.gain; % gain
     f.Generator{ii} = temp.Generator; % generator function
