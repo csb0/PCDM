@@ -1,4 +1,4 @@
-function f = gainFinder(d,ii)
+function [d f] = gainFinder(d,ii)
 % gainFinder.m
 %     
 %     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science 
@@ -21,8 +21,6 @@ end
 
 MIR = d.parametricLinearFilter-d.parametricLinearFilter(1);
 
-
-keyboard
 % create generator series
 generatorSeries = zeros(length(d.pupilTS{ii}),max(d.trialTypes{ii})); 
 predMatrix = zeros(length(d.pupilTS{ii}),max(d.trialTypes{ii})); 
@@ -35,15 +33,41 @@ for kk = 1:max(d.trialTypes{ii})
     predMatrix(:,kk) = pred(1:length(d.pupilTS{ii}));
 end
 
-% remove data up until trialWindow (eg 4 sec) in data and model, then fit
-% gains.****
+% remove bits beyond prediction window (e.g. 4 s past trial onset)
+preserveInds = [];
+for nn = 1:size(d.trInds{ii})   
+    if nn == size(d.trInds{ii},1)
+        preserveInds = [preserveInds d.trInds{ii}(nn,1):d.trInds{ii}(nn,2)];
+        preserveIndsMat(nn,:) = [d.trInds{ii}(nn,1) d.trInds{ii}(nn,2)];
+    else
+        preserveInds = [preserveInds d.trInds{ii}(nn,1):d.trInds{ii}(nn,1)+d.predictionWindow*d.sampleRate-1];
+        preserveIndsMat(nn,:) = [d.trInds{ii}(nn,1) d.trInds{ii}(nn,1)+d.predictionWindow*d.sampleRate-1];
+    end
+end
+predMatrix2 = predMatrix(preserveInds,:);
+d.pupilTS2{ii} = d.pupilTS{ii}(preserveInds);
 
-DM = [ones(length(d.pupilTS{ii}),1), predMatrix];
-sol = regress(d.pupilTS{ii}',DM);
+% fit
+DM = [ones(length(d.pupilTS2{ii}),1), predMatrix2];
+sol = regress(d.pupilTS2{ii}',DM);
 gain = sol(2:end);
 
-pred = gain'*predMatrix';
+predTS = gain'*predMatrix2';
 
+% only works if all trials end up being cut to same length (i.e., won't
+% work in cases where some trials are shorter than prediction window -
+% update to below method **
+predAvgMat = NaN(size(d.trInds{ii},1),d.predictionWindow*d.sampleRate+10);
+for nn = 1:size(d.trInds{ii},1)
+    startIndNew = find(preserveInds== preserveIndsMat(nn,1));
+    endIndNew = find(preserveInds== preserveIndsMat(nn,2));
+    predAvgMat(nn,:) = predTS(startIndNew(end):endIndNew(end));
+end
+
+pred = nanmean(reshape(predTS',d.predictionWindow*d.sampleRate,length(d.trInds{ii}))');
+pred = downsample(pred,d.downsampleRate,1);
+
+%{
 
 trAvgPredMat = NaN(length(d.trInds{ii}),length(d.TEPR{ii}));
 for ll = 1:length(d.trInds{ii})
@@ -55,7 +79,10 @@ for ll = 1:length(d.trInds{ii})
 end
 
 pred = downsample(nanmean(trAvgPredMat),d.downsampleRate,1);
+%}
 
+% cut trial-avg pupil data to length of prediction window
+d.TEPR{ii} = d.TEPR{ii}(1:d.predictionWindow*d.sampleRate/d.downsampleRate);
 
 offset = mean(d.TEPR{ii});
 

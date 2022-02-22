@@ -1,4 +1,4 @@
-function [d] = dataAnalysis(in)
+function [d, op] = dataAnalysis(in)
 % dataAnalysis.m
 %
 %     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science 
@@ -31,8 +31,8 @@ function [d] = dataAnalysis(in)
 %              - sampleRate: sampling rate of eye tracker (Hz)
 %              - trialTypes: trial types (e.g., easy / hard, or corr\error)
 %                integers for each trial, e.g. 1,2,3,4,5 (1 x n vector)
-%              - predictionWindow: time window within a trial to make a
-%                prediction (e.g. 4 sec within a jittered ISI expt)
+%              - predictionWindow: time window beyond trial onset to make a
+%                prediction within (e.g. 4 sec in a jittered ISI expt)
 %
 %              options struct "op" with field names:
 %
@@ -46,19 +46,20 @@ function [d] = dataAnalysis(in)
 %% Set options
 op.interpolateBlinks = 1; % 1, blink interpolation on; 0, interpolation off (use this if your input data is already blink interpolated)
 op.downsampleRate = 5; % downsample rate for the deconvolution design matrix. Higher numbers makes code run faster, but shouldn't be set higher than Nyquist frequency.
+op.fitTimeseries = 0; % if you want to fit the whole pupil time series, set to 1. To just fit the trial-average, set to 0. If you're just fitting more than one trial type, set this
 
 in.putativeIRFdur = 4; % how long you think the saccade-locked pupil response is in seconds. User-defined, but 4 s is a good estimate according to our results and the literature
 %in.trialTypes = ones(1,size(in.startInds,1)); % by default set to all ones. Change this to fit different trial types. For example, set all correct trials to 1 and all error trials to 2 if you want to estimate arousal on correct vs. incorrect trials.
 % debug: to generate random trial types
 %in.trialTypes( randi(75,75,1)) = 2; % CSB: remove when not using ***
 
-in.predictionWindow = 4; % The time window you want to make the prediction for the TEPR. Usually the max trial length, but can be shorter if you want.
+in.predictionWindow = 4; % The time window you want to make the prediction for the TEPR, beyond the trial onset time (in seconds). Usually the max trial length, but can be shorter if you want.
 
 
 %%
 numRuns = length(in.pupilArea); % number of runs of data (number of cells passed as input)
 
-for ff = 1:numRuns
+for ff = 1:10
     disp(['Processing Run #' num2str(ff)])
     
     %% Interpolate blinks (Mathot's method, modified for Parker & Denison 2020)
@@ -113,6 +114,16 @@ for ff = 1:numRuns
     
     TEPRmatrix = TEPRmatrix(1:length(pupilDN),:);
     d.TEPR{ff} = ( (pupilDN-nanmean(pupilDN)) * pinv(TEPRmatrix') ) + baseline; % deconvolve
+    
+%{    
+    % to simply find trial-avg up to prediction window, do this:
+    preserveInds = [];
+    for nn = 1:length(in.startInds{ff})
+        preserveInds = [preserveInds trialStartTimeDN(nn):trialStartTimeDN(nn)+in.predictionWindow*in.sampleRate{ff}/op.downsampleRate-1];
+    end
+    pupilDN2 = pupilDN(preserveInds);
+    pupilAvg = nanmean(reshape(pupilDN2',in.predictionWindow*in.sampleRate{ff}/op.downsampleRate,length(in.startInds{ff}))')+baseline;
+%}
     
     %% Estimate saccade rate function(s) (one per trial type)
     
