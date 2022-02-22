@@ -46,7 +46,7 @@ function [d, op] = dataAnalysis(in)
 %% Set options
 op.interpolateBlinks = 1; % 1, blink interpolation on; 0, interpolation off (use this if your input data is already blink interpolated)
 op.downsampleRate = 5; % downsample rate for the deconvolution design matrix. Higher numbers makes code run faster, but shouldn't be set higher than Nyquist frequency.
-op.fitTimeseries = 0; % if you want to estimate gain based on the whole pupil time series, set to 1. To just estimate gain based just on the trial-average (per trial type), set to 0. If you're just fitting more than one overlapping trial type and you want to take into account variance shared between them, set this to 1
+op.fitTimeseries = 0; % if you want to estimate gain based on the whole pupil time series, set to 1. To just fit the trial-average, set to 0. If you're just fitting more than one overlapping trial type and you want to take into account 
 
 in.putativeIRFdur = 4; % how long you think the saccade-locked pupil response is in seconds. User-defined, but 4 s is a good estimate according to our results and the literature
 %in.trialTypes = ones(1,size(in.startInds,1)); % by default set to all ones. Change this to fit different trial types. For example, set all correct trials to 1 and all error trials to 2 if you want to estimate arousal on correct vs. incorrect trials.
@@ -59,7 +59,7 @@ in.predictionWindow = 4; % The time window you want to make the prediction for t
 %%
 numRuns = length(in.pupilArea); % number of runs of data (number of cells passed as input)
 
-for ff = 1:numRuns
+for ff = 1:10
     disp(['Processing Run #' num2str(ff)])
     
     %% Interpolate blinks (Mathot's method, modified for Parker & Denison 2020)
@@ -100,7 +100,7 @@ for ff = 1:numRuns
     d.sacIrf(ff,:) = pupilDN * pinv(Sacmatrix'); % deconvolve
     
     %% Estimate task-evoked pupil response
-    
+    keyboard
     maxTrialLength = max(in.startInds{ff}(:,2)-in.startInds{ff}(:,1))+1; % samples
     
     % make a convolution matrix with width (max trial length)
@@ -115,25 +115,24 @@ for ff = 1:numRuns
     TEPRmatrix = TEPRmatrix(1:length(pupilDN),:);
     d.TEPR{ff} = ( (pupilDN-nanmean(pupilDN)) * pinv(TEPRmatrix') ) + baseline; % deconvolve
     
-    if op.fitTimeseries == 0
-        in.numTrialTypes{ff} = max(in.trialTypes{ff}); % number of trial types within the run of data. Shouldn't be set too high without feeding in much more data to constrain estimation.
+    
+    in.numTrialTypes{ff} = max(in.trialTypes{ff}); % number of trial types within the run of data. Shouldn't be set too high without feeding in much more data to constrain estimation.
+    
+    for ii = 1:double(in.numTrialTypes{ff}) % loop over trial types
+        trialNumsPerType{ii} = find(in.trialTypes{ff}(1:end-1)==ii);
+        nTrialsPerType(ii) = length(trialNumsPerType{ii});
         
-        for ii = 1:double(in.numTrialTypes{ff}) % loop over trial types
-            trialNumsPerType{ii} = find(in.trialTypes{ff}(1:end-1)==ii);
-            nTrialsPerType(ii) = length(trialNumsPerType{ii});
-            
-            startIndsThisTrialTypeDN = trialStartTimeDN(trialNumsPerType{ii});
-            trialStartTimeVecThisTrialTypeDN = zeros(1, length(pupilDN)); trialStartTimeVecThisTrialTypeDN(startIndsThisTrialTypeDN) = 1;
-            
-            for jj=1:maxTrialLengthDN
-                TEPRmatrixTT{ii}(1:length(pupilDN),jj) = [zeros(1,jj-1) trialStartTimeVecThisTrialTypeDN(1:length(pupilDN)-jj+1)]';
-            end
-            
-            
-            TEPRmatrixTT{ii} = TEPRmatrixTT{ii}(1:length(pupilDN),:);
-            d.TEPR_TT{ff}(ii,:) = ( (pupilDN-nanmean(pupilDN)) * pinv(TEPRmatrixTT{ii}') ) + baseline; % deconvolve
-            
+        startIndsThisTrialTypeDN = trialStartTimeDN(trialNumsPerType{ii});
+        trialStartTimeVecThisTrialTypeDN = zeros(1, length(pupilDN)); trialStartTimeVecThisTrialTypeDN(startIndsThisTrialTypeDN) = 1;
+        
+        for jj=1:maxTrialLengthDN
+            TEPRmatrixTT{ii}(1:length(pupilDN),jj) = [zeros(1,jj-1) trialStartTimeVecThisTrialTypeDN(1:length(pupilDN)-jj+1)]';
         end
+        
+        
+        TEPRmatrixTT{ii} = TEPRmatrixTT{ii}(1:length(pupilDN),:);
+        d.TEPR_TT{ff}(ii,:) = ( (pupilDN-nanmean(pupilDN)) * pinv(TEPRmatrixTT{ii}') ) + baseline; % deconvolve
+        
     end
     
 %{    
@@ -148,11 +147,9 @@ for ff = 1:numRuns
     
     %% Estimate saccade rate function(s) (one per trial type)
         
-    in.numTrialTypes{ff} = max(in.trialTypes{ff}); % number of trial types within the run of data. Shouldn't be set too high without feeding in much more data to constrain estimation.
-
     for ii = 1:double(in.numTrialTypes{ff}) % loop over trial types
-        trialNumsPerType{ii} = find(in.trialTypes{ff}(1:end-1)==ii);
-        nTrialsPerType(ii) = length(trialNumsPerType{ii});
+        %trialNumsPerType{ii} = find(in.trialTypes{ff}(1:end-1)==ii);
+        %nTrialsPerType(ii) = length(trialNumsPerType{ii});
         rateRaster{ii} = nan(nTrialsPerType(ii), maxTrialLength);
         saccadeTimeVector2{ii} = zeros(1, length(in.pupilArea3));
         saccadeTimeVector2{ii}(sacOnset) = 1;

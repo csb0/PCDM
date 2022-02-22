@@ -35,7 +35,7 @@ elseif op.fitTimeseries == 1
     
     for ii = 1:length(f.gain)
         figure(5)
-        subplot(1,length(f.gain),ii);
+        subplot(2,length(f.gain),ii);
         tBase = linspace(0,(length(d.TEPR{ii})*d.downsampleRate)/d.sampleRate,length(d.TEPR{ii}));
         plot(tBase,d.TEPR{ii},'b','lineWidth',2);
         hold on; plot(tBase,f.pred{ii}(1:length(d.TEPR{ii}))+f.offset{ii},'k','lineWidth',2);
@@ -44,8 +44,7 @@ elseif op.fitTimeseries == 1
         ylabel('Pupil area (AU)')
         title(['Run #' num2str(ii)])
         
-        figure(6)
-        subplot(length(f.gain),1,ii);
+         subplot(2,length(f.gain),ii+1);
         tBase = linspace(0,length(d.pupilTS2{ii})/d.sampleRate,length(d.pupilTS2{ii}));
         plot(tBase,d.pupilTS2{ii},'b','lineWidth',2);
         hold on; plot(tBase,f.predTS{ii},'k','lineWidth',2);

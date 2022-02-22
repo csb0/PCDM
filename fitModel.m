@@ -42,9 +42,13 @@ for ii = 1:numRuns % loop across runs
     f.offset{ii} = temp.offset; % additive offset
     f.Rsq{ii} = temp.Rsq; % R-squared of model
     f.pred{ii} = temp.pred; % model prediction of pupil response
+    
+    if op.fitTimeseries == 1
+        f.predTS{ii} = temp.predTS; % model prediction of full timeseries
+    end
 end
 
 % plot data and model fits
-plotFits(d,f);
+plotFits(d,f,op);
 
 end

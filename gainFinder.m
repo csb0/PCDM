@@ -13,7 +13,8 @@ function [d, f] = gainFinder(d,ii,op)
 threshold = 1; % arbitrary, but fixed
 d.sacRate2{ii}(d.sacRate2{ii}==0) = eps; % if rate is zero set it to a very small number so we don't reach inifinity at end of gaussian tail. Future implementations can instead regularize missing data..
 Generator = 1-d.sacRate2{ii};
-for kk = 1:size(d.sacRate2{ii}) %% kk index is for trial types
+numTrialTypes = size(d.sacRate2{ii},1);
+for kk = 1:numTrialTypes %% kk index is for trial types
     Generator(kk,:) = norminv(Generator(kk,:),0,1);
     Generator(kk,:)  = threshold - Generator(kk,:);
     Generator(kk,:) = Generator(kk,:)-nanmean(Generator(kk,:)); % mean-subtract generator function
@@ -56,6 +57,7 @@ if op.fitTimeseries == 1
     gain = sol(2:end);
     
     predTS = gain'*predMatrix2';
+    f.predTS = predTS;
     
     % only works if all trials end up being cut to same length (i.e., won't
     % work in cases where some trials are shorter than prediction window -
@@ -68,6 +70,16 @@ if op.fitTimeseries == 1
     end
     pred = nanmean(predAvgMat(:,1:d.predictionWindow*d.sampleRate));
     pred = downsample(pred,d.downsampleRate,1);
+    
+    
+    % cut trial-avg pupil data to length of prediction window
+    d.TEPR{ii} = d.TEPR{ii}(1:d.predictionWindow*d.sampleRate/d.downsampleRate);
+    
+    offset = mean(d.TEPR{ii});
+    
+    SSres = sum((d.TEPR{ii}-(pred+offset)).^2);
+    SStot = sum((d.TEPR{ii}-nanmean(d.TEPR{ii})).^2);
+    Rsq = 1 - (SSres./SStot);
     
     
     %pred = nanmean(reshape(predTS',d.predictionWindow*d.sampleRate,length(d.trInds{ii}))');
@@ -89,34 +101,31 @@ pred = downsample(nanmean(trAvgPredMat),d.downsampleRate,1);
     
     
     
-else
+elseif op.fitTimeseries == 0
     
-    for kk = 1:size(Generator,1)
+    for kk = 1:numTrialTypes     
+        pupilAvg(kk,:) = d.TEPR_TT{ii}(kk,:);
         predT = cconv(MIR,Generator(kk,:),size(Generator,2));
         predT = predT- (mean(predT,2));
-        predT = downsample(predT,d.downsampleRate,1);
-        predEach(kk,:) = predT;
+        predT2(kk,:) = downsample(predT,d.downsampleRate,1);
         
-        DM = [ones(length(d.TEPR{ii}),1), predEach(kk,:)'];
-        sol = regress(d.TEPR{ii}',DM);
+        DM = [ones(length(pupilAvg(kk,:)),1), predT2(kk,:)'];
+        sol = regress(pupilAvg(kk,:)',DM);
         
-        gain(kk) = sol(2:end);
+        gain(kk) = sol(2);
+        
+        pred1(kk,:) = gain(kk).*predT2(kk,:); % final prediction
+        pred(kk,:) = pred1(kk,1:d.predictionWindow*d.sampleRate/d.downsampleRate);
+        
+        d.TEPR_TT2{ii}(kk,:) = d.TEPR_TT{ii}(kk,1:d.predictionWindow*d.sampleRate/d.downsampleRate);
+        
+        offset(kk) = mean(d.TEPR_TT2{ii}(kk,:));
+        
+        SSres = sum((d.TEPR_TT2{ii}(kk,:)-(pred(kk,:)+offset(kk))).^2);
+        SStot = sum((d.TEPR_TT2{ii}(kk,:)-nanmean(d.TEPR_TT2{ii}(kk,:))).^2);
+        Rsq(kk) = real(1 - (SSres./SStot));
     end
-    
-    pred = gain*predEach; % final prediction
-    
-    % cut prediction to length of prediction window
-    pred = pred(1:d.predictionWindow*d.sampleRate/d.downsampleRate);
 end
-
-% cut trial-avg pupil data to length of prediction window
-d.TEPR{ii} = d.TEPR{ii}(1:d.predictionWindow*d.sampleRate/d.downsampleRate);
-
-offset = mean(d.TEPR{ii});
-
-SSres = sum((d.TEPR{ii}-(pred+offset)).^2);
-SStot = sum((d.TEPR{ii}-nanmean(d.TEPR{ii})).^2);
-Rsq = 1 - (SSres./SStot);
 
 
 % save out fits and parameters
