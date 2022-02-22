@@ -41,6 +41,12 @@ function [d, op] = dataAnalysis(in)
 %                otherwise, do this step yourself)
 %              - downsampleRate for deconvolution of saccade-locked pupil
 %                response (default 5)
+%              - fittimeSeries (0 or 1) to base the gain estimates on the
+%                entire time series (like an fMRI linear systems analysis). 
+%                This is useful if you have overlapping trial types or if 
+%                you want to account for shared variance between trial
+%                types. If set to 0, it will fit each trial type separately
+%                based on the trial-average.
 %
 
 %% Set options
@@ -49,12 +55,7 @@ op.downsampleRate = 5; % downsample rate for the deconvolution design matrix. Hi
 op.fitTimeseries = 0; % if you want to estimate gain based on the whole pupil time series, set to 1. To just estimate gain based just on the trial-average (per trial type), set to 0. If you're just fitting more than one overlapping trial type and you want to take into account variance shared between them, set this to 1
 
 in.putativeIRFdur = 4; % how long you think the saccade-locked pupil response is in seconds. User-defined, but 4 s is a good estimate according to our results and the literature
-%in.trialTypes = ones(1,size(in.startInds,1)); % by default set to all ones. Change this to fit different trial types. For example, set all correct trials to 1 and all error trials to 2 if you want to estimate arousal on correct vs. incorrect trials.
-% debug: to generate random trial types
-%in.trialTypes( randi(75,75,1)) = 2; % CSB: remove when not using ***
-
 in.predictionWindow = 4; % The time window you want to make the prediction for the TEPR, beyond the trial onset time (in seconds). Usually the max trial length, but can be shorter if you want.
-
 
 %%
 numRuns = length(in.pupilArea); % number of runs of data (number of cells passed as input)
@@ -73,6 +74,7 @@ for ff = 1:numRuns
     %% Band-pass filter pupil signal
     baseline = nanmean(in.pupilArea2); % get baseline first
     in.pupilArea3 = myBWfilter(in.pupilArea2,[0.03 , 10],in.sampleRate{ff},'bandpass');
+    d.pupilTS{ff} = in.pupilArea3; % save out timeseries
     
     %% Detect small saccades and microsaccades (method of Engbert & Mergenthaler 2006)
     vel = vecvel([in.xPos{ff} in.yPos{ff}], in.sampleRate{ff}, 3); % compute eye velocity
@@ -88,9 +90,6 @@ for ff = 1:numRuns
     % make a convolution matrix with width (putative IRF length)
     saccadeTimeVector = zeros(1, length(pupilDN)); saccadeTimeVector(sacTimeInd) = 1;
     nTrials = length(in.startInds);
-%     for trNum = 1:nTrials-1
-%         sacDuringThisTr = sacTimeInd(sacTimeInd < in.startInds{ff}(trNum,2) & sacTimeInd > in.startInds{ff}(trNum,1));
-%     end
     putativeIRFlength = in.putativeIRFdur*in.sampleRate{ff}/op.downsampleRate;
     for ii=1:putativeIRFlength
         Sacmatrix(1:length(pupilDN),ii) = [zeros(1,ii-1) saccadeTimeVector(1:length(pupilDN)-ii+1)]';
@@ -100,8 +99,14 @@ for ff = 1:numRuns
     d.sacIrf(ff,:) = pupilDN * pinv(Sacmatrix'); % deconvolve
     
     %% Estimate task-evoked pupil response
+    trialLengths = in.startInds{ff}(:,2)-in.startInds{ff}(:,1);
+    maxTrialLength = max(trialLengths)+1; % samples
     
-    maxTrialLength = max(in.startInds{ff}(:,2)-in.startInds{ff}(:,1))+1; % samples
+    if in.predictionWindow>maxTrialLength
+        error('Prediction window must be longer than max trial length')
+    elseif maxTrialLength/in.sampleRate{ff} > in.predictionWindow*1.5 || maxTrialLength/in.sampleRate{ff} > 6
+        warning('Your trials are quite long, which may cause slow drifts in arousal within a trial. Try shortening the prediction windowfirst and if that doesn''t help the model fits, you may need to fit a second gain in the second half of the trial to capture changes in arousal happening during the ISI.')
+    end
     
     % make a convolution matrix with width (max trial length)
     trialStartTimeDN = floor(in.startInds{ff}(:,1)/op.downsampleRate)+1;
@@ -163,9 +168,12 @@ for ff = 1:numRuns
         
         d.sacRateTemp = nanmean(rateRaster{ii});
         d.sacRate{ff}(ii,:) = d.sacRateTemp(1:maxTrialLength);
+        
+        d.nSaccsPerTrialType{ff}(ii) = nansum(nansum(rateRaster{ii}));
+        if d.nSaccsPerTrialType{ff}(ii) < 100
+            warning(['Too few saccades for trial type #' num2str(ii) '. Add more data and try again. In general the amount of data per trial type should be roughly the same or else you may over-estimate gain for the trial type with less data.'])
+        end
     end
-    
-    d.pupilTS{ff} = in.pupilArea3;
     
 end
 
@@ -175,6 +183,5 @@ d.sampleRate = in.sampleRate{1}; % there should be only one sampling rate for al
 d.downsampleRate = op.downsampleRate;
 d.trInds = in.startInds;
 d.predictionWindow = in.predictionWindow;
-
 
 end
