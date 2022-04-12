@@ -1,7 +1,7 @@
 function [d, op] = dataAnalysis(in)
 % dataAnalysis.m
 %
-%     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science 
+%     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science
 %           Advances. *Equal Authors
 %
 %     Date: 2/9/21
@@ -10,7 +10,7 @@ function [d, op] = dataAnalysis(in)
 %
 %              Specifically does the following: blink interpolation
 %              (optional), bandpass filtering of pupil data, saccade
-%              detection, deconvolution of saccade-locked pupil response, 
+%              detection, deconvolution of saccade-locked pupil response,
 %              estimation of task-evoked pupil response (can format data
 %              to lock pupil response to various events, e.g., task onset,
 %              cues, or button press), estimation of saccade rate
@@ -42,8 +42,8 @@ function [d, op] = dataAnalysis(in)
 %              - downsampleRate for deconvolution of saccade-locked pupil
 %                response (default 5)
 %              - fittimeSeries (0 or 1) to base the gain estimates on the
-%                entire time series (like an fMRI linear systems analysis). 
-%                This is useful if you have overlapping trial types or if 
+%                entire time series (like an fMRI linear systems analysis).
+%                This is useful if you have overlapping trial types or if
 %                you want to account for shared variance between trial
 %                types. If set to 0, it will fit each trial type separately
 %                based on the trial-average.
@@ -66,7 +66,7 @@ for ff = 1:numRuns
     %% Interpolate blinks (Mathot's method, modified for Parker & Denison 2020)
     if op.interpolateBlinks == 1
         in.pupilArea{ff}((isnan(in.pupilArea{ff}))) = 0; % set NaN regions to 0 for interp algorithm
-        aboveT = find(abs(diff(in.pupilArea{ff})) > (in.sampleRate{ff}/10) ); % set other blink regions that were not detected by EyeLink firmware to 0 as well.  velocity threshold as defined in samples should depend on sampleRate 
+        aboveT = find(abs(diff(in.pupilArea{ff})) > (in.sampleRate{ff}/10) ); % set other blink regions that were not detected by EyeLink firmware to 0 as well.  velocity threshold as defined in samples should depend on sampleRate
         in.pupilArea{ff}(aboveT) = 0; % set other blink regions that were not detected by EyeLink firmware to 0 as well
         in.pupilArea2 = blinkinterp(in.pupilArea{ff}',in.sampleRate{ff},5,4,50,75); % default options
     end
@@ -141,7 +141,7 @@ for ff = 1:numRuns
         end
     end
     
-%{    
+    %{
     % to simply find trial-avg up to prediction window, do this:
     preserveInds = [];
     for nn = 1:length(in.startInds{ff})
@@ -149,12 +149,12 @@ for ff = 1:numRuns
     end
     pupilDN2 = pupilDN(preserveInds);
     pupilAvg = nanmean(reshape(pupilDN2',in.predictionWindow*in.sampleRate{ff}/op.downsampleRate,length(in.startInds{ff}))')+baseline;
-%}
+    %}
     
     %% Estimate saccade rate function(s) (one per trial type)
-        
+    
     in.numTrialTypes{ff} = max(in.trialTypes{ff}); % number of trial types within the run of data. Shouldn't be set too high without feeding in much more data to constrain estimation.
-
+    
     for ii = 1:double(in.numTrialTypes{ff}) % loop over trial types
         trialNumsPerType{ii} = find(in.trialTypes{ff}(1:end-1)==ii);
         nTrialsPerType(ii) = length(trialNumsPerType{ii});

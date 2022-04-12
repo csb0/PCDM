@@ -1,7 +1,7 @@
 function plotFits(d,f,op)
 % plotFits.m
 %
-%     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science 
+%     Cite: Burlingham C*, Mirbagheri S*, Heeger DJ (2022). Science
 %           Advances. *Equal Authors
 %
 %     Date: 2/9/21
@@ -53,7 +53,7 @@ elseif op.fitTimeseries == 1
         xlabel('Time (ms)')
         ylabel('Pupil area (AU)')
         title(['Run #' num2str(ii)])
-
+        
     end
     legend('data','model')
     

@@ -103,7 +103,7 @@ pred = downsample(nanmean(trAvgPredMat),d.downsampleRate,1);
     
 elseif op.fitTimeseries == 0
     
-    for kk = 1:numTrialTypes     
+    for kk = 1:numTrialTypes
         pupilAvg(kk,:) = d.TEPR_TT{ii}(kk,:);
         predT = cconv(MIR,Generator(kk,:),size(Generator,2));
         predT = predT- (mean(predT,2));
