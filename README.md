@@ -24,6 +24,9 @@ If you’d like to do this with multiple events simultaneously and take into acc
 ### Estimating multiple gains per trial
 If you have some reason to think the gain changes within a trial, you can estimate multiple gains per trial by modifying gainFinder so that the gain is a vector instead of a scalar, where it’s length is the trial length. Usually you will make this gain vector a piece-wise constant function, so that there, say, one gain before the button press or other cue, and another gain after. If you are going to run an experiment with longer trials, for example a jittered ISI experiment with ISIs up to 6-8 seconds, you probably want to fit at least two gains per trial, because arousal should be expected to get lower at the end of the long trial due to disengagement. You can do parameter recovery simulations to see how much data you will need to constrain estimation of multiple gains.
 
+## Testing the model on additional datasets #######################
+We tested the model on three additional datasets, which were not included in the original manuscript. The enclosed document “new_datasets.pdf” describes these three experiments, their purpose, and depicts the data and model fits for each observer. This shows that the model is able to: generate sensible estimates of arousal for cases in which (1) the task difficulty was randomized across trials, (2) the task difficulty was alternated every 5 trials in a block design, (3) the stimulus was in an annulus around fixation rather than in the periphery, and (4) in the absence of a staircase / when the stimulus tilt was fixed (i.e., no external noise).
+
 ## Citing #########################################################
 
 To cite PCDM, please reference the following:
