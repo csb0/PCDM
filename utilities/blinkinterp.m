@@ -101,7 +101,7 @@ if all(trial) == 0  %check to see if blink regions (zeros) exist in trial
     trial = [(trial(1)*ones(1,ncushion)) trial];  %add cushion for convultion
     trial = [trial (trial(end)*ones(1,ncushion))];
     
-    h = hanning(nhan); %function convolved with raw trial
+    h = hann2(nhan); %function convolved with raw trial
     htrial = conv(trial,h/sum(h),'same'); %generate smoothed trial (easier to read velocity profile
     
     trial(1:ncushion) = []; %remove cushions from trial
