@@ -4,7 +4,7 @@ A pupillometry toolbox for MATLAB.
 ## Authors ########################################################
 Charlie S. Burlingham &lt;<cs.burlingham@gmail.com>&gt; and Saghar Mirbagheri &lt;<sagharm@uw.edu>&gt;
 
-## Usage ############################################################
+## Usage ##########################################################
 To use the toolbox, navigate to PCDM directory in MATLAB, run the command addpath(genpath(pwd)). Then, create an input data struct “in” containing your eye data, task event timing, and trial types (see DataAnalysis.m for details on formatting) and run fitModel. The toolbox takes in the raw gaze position and pupil area time series. The code was tested on data collected with an EyeLink eye tracker, but should work with data from other systems. The function fitModel.m returns a struct “f” containing the model’s parameter estimates, prediction of the task-evoked pupil response, and goodness of fit (R^2), as well as plots of the model fits and parameter estimates for each run/block of data.
 
 If you are using pupil data that already has blinks removed, set “op.blinkInterpolation” to 0 in the preamble of the function dataAnalysis.m. Otherwise, set “op.blinkInterpolation” to 1 (it is already by default), and the code will perform blink interpolation.
@@ -13,6 +13,10 @@ For estimating gain correctly, 5 minutes of eye data suffices. If you’d like t
 
 ## Example Data ###################################################
 We include two runs of real data from our 4 s experiment, so you can see how the input data is structured and reproduce the model fits from our paper. The trial types included in in.trialTypes simply encode correct (“2”) and error (“1”) trials. This is just an example. As a general rule, it’s important to roughly equalize the amount of data (really, the number of saccades) in each trial type. So you may want to analyze unequal numbers of trials per condition, in order to roughly equalize the number of saccades within each condition (found in the variable d.nSaccsPerTrialType).
+
+## Dependencies ###################################################
+Statistics and Machine Learning Toolbox
+Signal Processing Toolbox
 
 ## Variants/Extensions ############################################
 
