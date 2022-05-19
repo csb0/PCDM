@@ -15,7 +15,7 @@ For estimating gain correctly, 5 minutes of eye data suffices. If you’d like t
 We include two runs of real data from our 4 s experiment, so you can see how the input data is structured and reproduce the model fits from our paper. The trial types included in in.trialTypes simply encode correct (“2”) and error (“1”) trials. This is just an example. As a general rule, it’s important to roughly equalize the amount of data (really, the number of saccades) in each trial type. So you may want to analyze unequal numbers of trials per condition, in order to roughly equalize the number of saccades within each condition (found in the variable d.nSaccsPerTrialType).
 
 ## Dependencies ###################################################
-Statistics and Machine Learning Toolbox
+Statistics and Machine Learning Toolbox, 
 Signal Processing Toolbox
 
 ## Variants/Extensions ############################################
