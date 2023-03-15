@@ -107,7 +107,12 @@ elseif op.fitTimeseries == 0
         pupilAvg(kk,:) = d.TEPR_TT{ii}(kk,:);
         predT = cconv(MIR,Generator(kk,:),size(Generator,2));
         predT = predT- (mean(predT,2));
-        predT2(kk,:) = downsample(predT,d.downsampleRate,1);
+        
+        if d.downsampleRate == 1
+            predT2(kk,:) =  predT;
+        else
+            predT2(kk,:) = downsample(predT,d.downsampleRate,1);
+        end
         
         DM = [ones(length(pupilAvg(kk,:)),1), predT2(kk,:)'];
         sol = regress(pupilAvg(kk,:)',DM);

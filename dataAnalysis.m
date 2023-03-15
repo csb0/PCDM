@@ -51,7 +51,7 @@ function [d, op] = dataAnalysis(in)
 
 %% Set options
 op.interpolateBlinks = 1; % 1, blink interpolation on; 0, interpolation off (use this if your input data is already blink interpolated)
-op.downsampleRate = 5; % downsample rate for the deconvolution design matrix. Higher numbers makes code run faster, but shouldn't be set higher than Nyquist frequency.
+op.downsampleRate = 1; % downsample rate for the deconvolution design matrix. Higher numbers makes code run faster, but shouldn't be set higher than Nyquist frequency.
 op.fitTimeseries = 0; % if you want to estimate gain based on the whole pupil time series, set to 1. To just estimate gain based just on the trial-average (per trial type), set to 0. If you're just fitting more than one overlapping trial type and you want to take into account variance shared between them, set this to 1
 
 in.putativeIRFdur = 4; % how long you think the saccade-locked pupil response is in seconds. User-defined, but 4 s is a good estimate according to our results and the literature
@@ -77,7 +77,14 @@ for ff = 1:numRuns
     d.pupilTS{ff} = in.pupilArea3; % save out timeseries
     
     %% Detect small saccades and microsaccades (method of Engbert & Mergenthaler 2006)
-    vel = vecvel([in.xPos{ff} in.yPos{ff}], in.sampleRate{ff}, 3); % compute eye velocity
+    if in.sampleRate{ff} ==  500
+        typeVar1 = 3;
+    elseif in.sampleRate{ff} ==  1000
+        typeVar1 = 3;
+    else
+        typeVar1 = 2;
+    end
+    vel = vecvel([in.xPos{ff} in.yPos{ff}], in.sampleRate{ff}, typeVar1); % compute eye velocity
     d.saccTimes{ff} = microsacc([in.xPos{ff} in.yPos{ff}], vel, 8, 7); % detect (micro)saccade times based on eye velocity
     
     %% Estimate saccade-locked pupil response
