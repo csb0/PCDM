@@ -29,7 +29,7 @@ for ii = 1:numRuns
 end
 
 % estimate parametric linear filter from run-average saccade-locked pupil response
-IrfAvg = nanmean(d.sacIrf); % avg. saccade-locked IRF across all runs
+IrfAvg = nanmean(d.sacIrf,1); % avg. saccade-locked IRF across all runs
 [parametricLinearFilter, params_PuRF, Rsq_PuRF, normFactor_PuRF] = fitParametricPuRFfromData(IrfAvg,d.sampleRate./d.downsampleRate,d.sampleRate,1);
 d.parametricLinearFilter = parametricLinearFilter;
 
