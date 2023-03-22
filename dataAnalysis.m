@@ -51,11 +51,11 @@ function [d, op] = dataAnalysis(in)
 
 %% Set options
 op.interpolateBlinks = 1; % 1, blink interpolation on; 0, interpolation off (use this if your input data is already blink interpolated)
-op.downsampleRate = 1; % downsample rate for the deconvolution design matrix. Higher numbers makes code run faster, but shouldn't be set higher than Nyquist frequency.
+op.downsampleRate = 5; % downsample rate for the deconvolution design matrix. Higher numbers makes code run faster, but shouldn't be set higher than Nyquist frequency.
 op.fitTimeseries = 0; % if you want to estimate gain based on the whole pupil time series, set to 1. To just estimate gain based just on the trial-average (per trial type), set to 0. If you're just fitting more than one overlapping trial type and you want to take into account variance shared between them, set this to 1
 
 in.putativeIRFdur = 4; % how long you think the saccade-locked pupil response is in seconds. User-defined, but 4 s is a good estimate according to our results and the literature
-in.predictionWindow = 4; % The time window you want to make the prediction for the TEPR, beyond the trial onset time (in seconds). Usually the max trial length, but can be shorter if you want.
+in.predictionWindow = 4; % The time window you want to make the prediction for the TEPR, beyond the trial onset time (in seconds). Usually the experimenter-set trial duration (if you're using fixed trial durations), but can be shorter if you want.
 
 %%
 numRuns = length(in.pupilArea); % number of runs of data (number of cells passed as input)
@@ -109,10 +109,10 @@ for ff = 1:numRuns
     trialLengths = in.startInds{ff}(:,2)-in.startInds{ff}(:,1);
     maxTrialLength = max(trialLengths)+1; % samples
     
-    if in.predictionWindow>maxTrialLength
-        error('Prediction window must be longer than max trial length')
+    if maxTrialLength < in.predictionWindow*in.sampleRate{ff} 
+        error('Prediction window must be shorter than the max trial length.')
     elseif maxTrialLength/in.sampleRate{ff} > in.predictionWindow*1.5 || maxTrialLength/in.sampleRate{ff} > 6
-        warning('Your trials are quite long, which may cause slow drifts in arousal within a trial. Try shortening the prediction windowfirst and if that doesn''t help the model fits, you may need to fit a second gain in the second half of the trial to capture changes in arousal happening during the ISI.')
+        warning('Your trials are quite long, which may cause slow drifts in arousal within a trial. Try shortening the prediction window first and if that doesn''t help the model fits, you may need to fit a second gain in the second half of the trial to capture changes in arousal happening during the ISI.')
     end
     
     % make a convolution matrix with width (max trial length)

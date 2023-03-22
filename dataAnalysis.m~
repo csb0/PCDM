@@ -55,7 +55,7 @@ op.downsampleRate = 5; % downsample rate for the deconvolution design matrix. Hi
 op.fitTimeseries = 0; % if you want to estimate gain based on the whole pupil time series, set to 1. To just estimate gain based just on the trial-average (per trial type), set to 0. If you're just fitting more than one overlapping trial type and you want to take into account variance shared between them, set this to 1
 
 in.putativeIRFdur = 4; % how long you think the saccade-locked pupil response is in seconds. User-defined, but 4 s is a good estimate according to our results and the literature
-in.predictionWindow = 4; % The time window you want to make the prediction for the TEPR, beyond the trial onset time (in seconds). Usually the max trial length, but can be shorter if you want.
+in.predictionWindow = 4; % The time window you want to make the prediction for the TEPR, beyond the trial onset time (in seconds). Usually the max trial length (if you're using jittered trial durations) or the experimenter-set trial duration (if you're using fixed trial durations), but can be shorter if you want.
 
 %%
 numRuns = length(in.pupilArea); % number of runs of data (number of cells passed as input)
@@ -77,7 +77,14 @@ for ff = 1:numRuns
     d.pupilTS{ff} = in.pupilArea3; % save out timeseries
     
     %% Detect small saccades and microsaccades (method of Engbert & Mergenthaler 2006)
-    vel = vecvel([in.xPos{ff} in.yPos{ff}], in.sampleRate{ff}, 3); % compute eye velocity
+    if in.sampleRate{ff} ==  500
+        typeVar1 = 3;
+    elseif in.sampleRate{ff} ==  1000
+        typeVar1 = 3;
+    else
+        typeVar1 = 2;
+    end
+    vel = vecvel([in.xPos{ff} in.yPos{ff}], in.sampleRate{ff}, typeVar1); % compute eye velocity
     d.saccTimes{ff} = microsacc([in.xPos{ff} in.yPos{ff}], vel, 8, 7); % detect (micro)saccade times based on eye velocity
     
     %% Estimate saccade-locked pupil response
@@ -101,12 +108,11 @@ for ff = 1:numRuns
     %% Estimate task-evoked pupil response
     trialLengths = in.startInds{ff}(:,2)-in.startInds{ff}(:,1);
     maxTrialLength = max(trialLengths)+1; % samples
-    keyboard
     
-    if in.predictionWindow>maxTrialLength
-        error('Prediction window must be longer than max trial length')
+    if in.predictionWindow*in.sampleRate{ff} > maxTrialLength
+        warning('Prediction window must be shorter than max trial length. ')
     elseif maxTrialLength/in.sampleRate{ff} > in.predictionWindow*1.5 || maxTrialLength/in.sampleRate{ff} > 6
-        warning('Your trials are quite long, which may cause slow drifts in arousal within a trial. Try shortening the prediction windowfirst and if that doesn''t help the model fits, you may need to fit a second gain in the second half of the trial to capture changes in arousal happening during the ISI.')
+        warning('Your trials are quite long, which may cause slow drifts in arousal within a trial. Try shortening the prediction window first and if that doesn''t help the model fits, you may need to fit a second gain in the second half of the trial to capture changes in arousal happening during the ISI.')
     end
     
     % make a convolution matrix with width (max trial length)
@@ -162,7 +168,7 @@ for ff = 1:numRuns
         rateRaster{ii} = nan(nTrialsPerType(ii), maxTrialLength);
         saccadeTimeVector2{ii} = zeros(1, length(in.pupilArea3));
         saccadeTimeVector2{ii}(sacOnset) = 1;
-        keyboard
+        
         for trNum = trialNumsPerType{ii}
             rateRaster{ii}(trNum,1:in.startInds{ff}(trNum,2) - in.startInds{ff}(trNum,1)+1) = saccadeTimeVector2{ii}(in.startInds{ff}(trNum,1):in.startInds{ff}(trNum,2));
         end
